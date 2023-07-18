@@ -10,9 +10,9 @@ class DeliveryStatus(Enum):
 
 
 class Package:
-    def __init__(self, package_id, delivery_address, delivery_city, delivery_state,
+    def __init__(self, pack_id, delivery_address, delivery_city, delivery_state,
                  delivery_zipcode, delivery_deadline, mass_kg, notes):
-        self.package_id = package_id
+        self.package_id = pack_id
         self.delivery_address = delivery_address
         self.delivery_city = delivery_city
         self.delivery_state = delivery_state
@@ -24,11 +24,13 @@ class Package:
 
     def __str__(self):  # overwriting print(Package)
         return "%s, %s, %s, %s, %s, %s, %s, %s, %s" % (self.package_id, self.delivery_address, self.delivery_city,
-                self.delivery_state, self.delivery_zipcode, self.delivery_deadline, self.mass, self.notes, self.delivery_status)
+                                                       self.delivery_state, self.delivery_zipcode,
+                                                       self.delivery_deadline, self.mass, self.notes,
+                                                       self.delivery_status)
 
 
 class Truck:
-    def __init__(self, truck_id, location, time, left_hub, pack_limit=16, truck_speed=18):
+    def __init__(self, truck_id, time, left_hub, location="HUB", pack_limit=16, truck_speed=18):
         self.truck_id = truck_id
         self.location = location
         self.time = time
@@ -37,13 +39,14 @@ class Truck:
         self.packages = []
         self.truck_speed = truck_speed
 
-    def add_package(self, package_id):
+    def add_package(self, pack_id):
         if len(self.packages) >= self.pack_limit:
             print('Truck is full!')
         else:
-            self.packages.append(package_id)
+            self.packages.append(pack_id)
 
 
+# ------Chaining Hash Table Class-----------------------------------------------
 class ChainingHashTable:
     def __init__(self, initial_capacity=10):
         self.table = []
@@ -89,32 +92,50 @@ class ChainingHashTable:
         return None
 
 
+# ------Function to load data into Package objects----------------------------------------
 def load_package_data(csv_file, hash_table):
     # https://docs.python.org/3/library/csv.html
     with open(csv_file, newline='') as packages_csv:
         package_data = csv.reader(packages_csv, delimiter=',', quotechar='|')
         next(package_data)  # Skip header
         for row in package_data:
-            package_obj = Package(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
+            package_obj = Package(int(row[0]), row[1], row[2], row[3], row[4], row[5], row[6], row[7])
             hash_table.insert(int(package_obj.package_id), package_obj)
 
 
-package_hash = ChainingHashTable()
+package_hash = ChainingHashTable()  # Create hash table
 
-load_package_data('packages.csv', package_hash)
+load_package_data('packages.csv', package_hash)  # Load package data from .csv file
 
 # Get data from hash table
-for i in range(len(package_hash.table)*4):
-    print("Key: {} and Package {}".format(i+1, package_hash.search(i+1)))
+for i in range(len(package_hash.table) * 4):
+    print("Key: {} and Package {}".format(i + 1, package_hash.search(i + 1)))
 
-# print(package_hash.search(15))
+print('\n', package_hash.search(15).package_id)
+
+# ------Load Trucks----------------------------------------------------------
+"""
+truck_1 = Truck(1, '8:00', '8:00')
+truck_2 = Truck(2, '8:00', '8:00')
+
+package_id = 1
+while len(truck_1.packages) < truck_1.pack_limit:
+    truck_1.add_package(package_hash.search(package_id).package_id)
+    package_hash.remove(package_id)
+    package_id += 1
+
+print('\nTruck_', truck_1.truck_id, ' packages: ', truck_1.packages)
+print('package_id: ', package_id)
+while len(truck_2.packages) < truck_2.pack_limit:
+    truck_2.add_package(package_hash.search(package_id).package_id)
+    package_hash.remove(package_id)
+    package_id += 1
+
+print('\nTruck_', truck_2.truck_id, ' packages: ', truck_2.packages, '\n')
+"""
 
 
-class Vertex:
-    def __init__(self, label):
-        self.label = label
-
-
+# -------Create distance array and address list -----------------------------------------
 def create_distance_array(csv_file):
     with open(csv_file, newline='') as distances_csv:
         distances = csv.reader(distances_csv, delimiter=',', quotechar='|')
@@ -126,7 +147,7 @@ def create_distance_array(csv_file):
 
 
 distance_array = create_distance_array('distances.csv')
-print('\n', distance_array)
+print('\n\n\nDistance Array: ', distance_array)
 
 
 def create_address_list(csv_file):
@@ -140,8 +161,8 @@ def create_address_list(csv_file):
 
 
 address_list = create_address_list('addresses.csv')
-print('\n', address_list)
-print('\n', address_list[1][1])
+print('\nAddress List: ', address_list)
+print('\nSingle Address: ', address_list[1][1])
 
 
 def address_lookup(address_str, list_addresses):
@@ -153,7 +174,65 @@ def address_lookup(address_str, list_addresses):
         row_count += 1
 
 
-print('\n', address_lookup('1330 2100 South', address_list))
+print('\nAddress Lookup: ', address_lookup('6351 S 900 East', address_list))
+print('\nDistance Between: ',
+      distance_array[address_lookup('6351 S 900 East', address_list)][address_lookup('5025 State St', address_list)])
+
+
+truck_packages = [package_hash.search(1).package_id, package_hash.search(2).package_id,
+                  package_hash.search(3).package_id, package_hash.search(4).package_id,
+                  package_hash.search(5).package_id, package_hash.search(6).package_id,
+                  package_hash.search(7).package_id, package_hash.search(8).package_id,
+                  package_hash.search(9).package_id, package_hash.search(10).package_id,
+                  package_hash.search(11).package_id, package_hash.search(12).package_id,
+                  package_hash.search(13).package_id, package_hash.search(14).package_id,
+                  package_hash.search(15).package_id, package_hash.search(16).package_id]
+
+print('\nTRUCK PACKAGE: ', package_hash.search(int(truck_packages[0])).delivery_address, '\n\n')
+
+
+def delivery_algorithm(pack_list):  # Trying for nearest neighbor
+    avg_speed = 18 / 60  # avg_speed in miles per minute
+    # Determine the next address and associated distance
+    curr_address = address_lookup('4001 S 700 East', address_list)  # Always start package delivery from HUB
+    total_distance = 0
+    while len(pack_list) > 0:
+        short_distance = float("inf")  # Next distance will always be less than infinity so next address will update
+        package_index = 0
+        for package in pack_list:
+            tmp_next_address = address_lookup(package_hash.search(int(pack_list[package_index])).delivery_address, address_list)
+            tmp_distance = float(distance_array[tmp_next_address][curr_address])
+            if tmp_distance < short_distance:
+                next_address = tmp_next_address
+                short_distance = tmp_distance
+                remove_package = package
+
+            package_index += 1
+
+        print('Heading to address ', package_hash.search(next_address).delivery_address, ', ', short_distance,
+              ' miles. Removing package ', remove_package, '.')
+        pack_list.remove(remove_package)
+        curr_address = next_address
+        travel_time = short_distance / avg_speed
+        total_distance = float("%0.2f" % (total_distance + short_distance))
+
+        print('Truck package list: ', pack_list)
+        print('Current address is ', curr_address, '. Total distance travelled is ',
+              total_distance, ' miles.')
+
+    print('\nReturning to HUB.')
+    total_distance = total_distance + float(distance_array[0][curr_address])  # Calculate distance after return to HUB
+    print('\nTotal distance travelled was ', total_distance, ' miles.')
+
+
+print("DELIVERING:")
+delivery_algorithm(truck_packages)
+
+"""
+# ------Dijkstra Algorithm---------------------------------------------------
+class Vertex:
+    def __init__(self, label):
+        self.label = label
 
 
 class Graph:
@@ -211,3 +290,4 @@ def get_shortest_path(start_vertex, end_vertex):
         current_vertex = current_vertex.pred_vertex
     path = start_vertex.label + path
     return path
+"""
