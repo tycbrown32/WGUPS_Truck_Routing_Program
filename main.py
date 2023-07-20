@@ -1,8 +1,9 @@
 # Tyler Brown 010479775
 import csv
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, timedelta
 
 
+# Package Class --------------------------------------------------------------------------------------------------------
 class Package:
     def __init__(self, pack_id, delivery_address, delivery_city, delivery_state,
                  delivery_zipcode, delivery_deadline, mass_kg, notes):
@@ -14,25 +15,26 @@ class Package:
         self.delivery_deadline = delivery_deadline
         self.mass = mass_kg
         self.notes = notes
-        self.delivery_status = "HUB"
-        self.delivery_timestamp = "Waiting delivery.."
+        self.delivery_status = "AT HUB"
+        self.status_update_time = "Waiting delivery.."
 
     def __str__(self):  # overwriting print(Package)
         return "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s" % (self.package_id, self.delivery_address, self.delivery_city,
-                                                       self.delivery_state, self.delivery_zipcode,
-                                                       self.delivery_deadline, self.mass, self.notes,
-                                                       self.delivery_status, self.delivery_timestamp)
+                                                           self.delivery_state, self.delivery_zipcode,
+                                                           self.delivery_deadline, self.mass, self.notes,
+                                                           self.delivery_status, self.status_update_time)
 
 
+# Truck Class ----------------------------------------------------------------------------------------------------------
 class Truck:
-    def __init__(self, truck_id, time, left_hub, location="HUB", pack_limit=16, truck_speed=18):
-        self.truck_id = truck_id
+    def __init__(self, truck_id, truck_time, location="AT HUB", pack_limit=16, speed=18):
+        self.id = truck_id
         self.location = location
-        self.time = time
-        self.left_hub = left_hub
+        self.truck_time = truck_time
         self.pack_limit = pack_limit
         self.packages = []
-        self.truck_speed = truck_speed
+        self.speed = speed
+        self.distance_travelled = float("%0.2f" % 0)
 
     def add_package(self, pack_id):
         if len(self.packages) >= self.pack_limit:
@@ -40,10 +42,70 @@ class Truck:
         else:
             self.packages.append(pack_id)
 
-    # Move delivery algorithm here?
+    def load_packages_onto_truck(self, packs):
+        for pack in packs:
+            self.add_package(pack)
+            package_hash.search(pack).delivery_status = "IN ROUTE"
+            package_hash.search(pack).status_update_time = self.truck_time.strftime("%H:%M")
+
+    # Package delivery algorithm using nearest neighbor. Runtime O(n) = xx. Space Complexity O(n) = xx.
+    def package_delivery(self):
+        avg_speed = self.speed / 60  # Average speed in miles per minute
+
+        # Determine the next address and associated distance
+        curr_address = address_lookup('4001 S 700 East', address_list)  # Always start package delivery from HUB
+
+        # Loop through package list until list is empty
+        while len(self.packages) > 0:
+            short_distance = float("inf")  # Next distance will always be less than infinity so next address will update
+
+            # Determine the package with the nearest delivery location
+            package_index = 0
+            for package in self.packages:
+                tmp_next_address = address_lookup(package_hash.search(int(self.packages[package_index])).delivery_address,
+                                                  address_list)
+                tmp_distance = float(distance_array[tmp_next_address][curr_address])
+
+                # If the temp_distance is less than the current short_distance -> update short_distance
+                if tmp_distance < short_distance:
+                    next_address = tmp_next_address
+                    short_distance = tmp_distance
+                    remove_package = package
+
+                package_index += 1  # Iterate to next package to determine distance from current location
+
+            # Travel to next destination. Update current address (with next_address).
+            travel_time = timedelta(minutes=(short_distance / avg_speed))  # Calculate travel time (minutes)
+            curr_address = next_address  # Update current address
+            self.truck_time = self.truck_time + travel_time
+
+            # 'Deliver' package by removing it from the truck's package list and timestamping it.
+            """ print('Heading to address ', package_hash.search(next_address).delivery_address, ', ', short_distance,
+                  ' miles. Delivering package ', remove_package, '. Package delivered at ',
+                  self.truck_time.strftime('%H:%M'), '.')"""
+
+            self.packages.remove(remove_package)
+            package_hash.search(remove_package).delivery_status = "DELIVERED"
+            package_hash.search(remove_package).status_update_time = self.truck_time.strftime('%H:%M')
+            self.distance_travelled = float("%0.2f" % (self.distance_travelled + short_distance))
+
+            """print('Truck package list: ', self.packages)
+            print('Current address is ', curr_address, '. Total distance travelled is ',
+                self.distance_travelled, ' miles.\n')"""
+
+        # 'Return to hub'. Update distance travelled by truck and time truck returned to hub.
+        """print('\nReturning to HUB.')"""
+        distance_to_hub = float(distance_array[0][curr_address])  # Calculate distance back to hub
+        self.truck_time = self.truck_time + timedelta(minutes=(distance_to_hub / avg_speed))  # Calculate and update time returned to hub
+        self.distance_travelled = self.distance_travelled + distance_to_hub  # Calculate distance after return to HUB
+        """print('Total distance travelled was ', self.distance_travelled, ' miles. Current time is ',
+              self.truck_time.strftime('%H:%M'), '.\n\n')"""
+
+    def __str__(self):  # overwriting print(Truck)
+        return "%s, %s, %s, %s" % (self.id, self.location, self.truck_time.strftime("%H:%M"), self.distance_travelled)
 
 
-# ------Chaining Hash Table Class-----------------------------------------------
+# Chaining Hash Table Class---------------------------------------------------------------------------------------------
 class ChainingHashTable:
     def __init__(self, initial_capacity=10):
         self.table = []
@@ -62,7 +124,7 @@ class ChainingHashTable:
                 kv[1] = obj
                 return True
 
-        # insert val to end of bucket list
+        # Insert val to end of bucket list
         key_value = [key, obj]
         bucket_list.append(key_value)
         return True
@@ -89,7 +151,10 @@ class ChainingHashTable:
         return None
 
 
-# ------Function to load data into Package objects----------------------------------------
+package_hash = ChainingHashTable()  # Create hash table
+
+
+# Function to load data from .csv file into Package objects-------------------------------------------------------------
 def load_package_data(csv_file, hash_table):
     # https://docs.python.org/3/library/csv.html
     with open(csv_file, newline='') as packages_csv:
@@ -100,20 +165,16 @@ def load_package_data(csv_file, hash_table):
             hash_table.insert(int(package_obj.package_id), package_obj)
 
 
-package_hash = ChainingHashTable()  # Create hash table
-
 load_package_data('packages.csv', package_hash)  # Load package data from .csv file
 
 """
 # Get data from hash table
 for i in range(len(package_hash.table) * 4):
     print("Key: {} and Package {}".format(i + 1, package_hash.search(i + 1)))
-
-print('\n', package_hash.search(15).package_id)
 """
 
 
-# -------Create distance array and address list -----------------------------------------
+# Create distance array and address list from .csv file ----------------------------------------------------------------
 def create_distance_array(csv_file):
     with open(csv_file, newline='') as distances_csv:
         distances = csv.reader(distances_csv, delimiter=',', quotechar='|')
@@ -124,10 +185,10 @@ def create_distance_array(csv_file):
         return distance_arr
 
 
-distance_array = create_distance_array('distances.csv')
-# print('\n\n\nDistance Array: ', distance_array)
+distance_array = create_distance_array('distances.csv')  # Create array of distances
 
 
+# Create address list from .csv file -----------------------------------------------------------------------------------
 def create_address_list(csv_file):
     with open(csv_file, newline='') as addresses_csv:
         addresses = csv.reader(addresses_csv, delimiter=',', quotechar='|')
@@ -138,11 +199,10 @@ def create_address_list(csv_file):
         return list_addresses
 
 
-address_list = create_address_list('addresses.csv')
-# print('\nAddress List: ', address_list)
-# print('\nSingle Address: ', address_list[1][1])
+address_list = create_address_list('addresses.csv')  # Create address list
 
 
+# Address lookup function to determine a number associated with and address --------------------------------------------
 def address_lookup(address_str, list_addresses):
     row_count = 0
     for row in list_addresses:
@@ -151,143 +211,54 @@ def address_lookup(address_str, list_addresses):
                 return row_count
         row_count += 1
 
-
-# print('\nAddress Lookup: ', address_lookup('6351 S 900 East', address_list))
-# print('\nDistance Between: ',
-    # distance_array[address_lookup('6351 S 900 East', address_list)][address_lookup('5025 State St', address_list)])
-
-
-truck_packages = [package_hash.search(1).package_id, package_hash.search(2).package_id,
-                  package_hash.search(3).package_id, package_hash.search(4).package_id,
-                  package_hash.search(5).package_id, package_hash.search(6).package_id,
-                  package_hash.search(7).package_id, package_hash.search(8).package_id,
-                  package_hash.search(9).package_id, package_hash.search(10).package_id,
-                  package_hash.search(11).package_id, package_hash.search(12).package_id,
-                  package_hash.search(13).package_id, package_hash.search(14).package_id,
-                  package_hash.search(15).package_id, package_hash.search(16).package_id]
-
-# print('\nTRUCK PACKAGE: ', package_hash.search(int(truck_packages[0])).delivery_address, '\n\n')
+"""
+def delivery_time(check_time):
+    for pack in package_hash:
+        if package_hash.search(pack).delivery_status == "DELIVERED" and
+            package_hash.search(pack).status_update_time >= check_time:
+"""
 
 
-curr_time = datetime(2023, 7, 19, 8, 0)
-# tdelta = timedelta(minutes=12)
-# print(type(curr_time), '  ', type(tdelta))
-# print(curr_time + tdelta)
+# WGUPS Operation execution --------------------------------------------------------------------------------------------
+truck1_start_time = datetime(2023, 7, 19, 8, 0)  # truck1 starts its first delivery at 8:00 AM
+truck2_start_time = datetime(2023, 7, 19, 9, 5)  # truck2 starts its first delivery at 9:05 AM when delayed packages arrive
 
-
-def delivery_algorithm(pack_list, current_time):  # Trying for nearest neighbor
-    avg_speed = 18 / 60  # avg_speed in miles per minute
-
-    # Determine the next address and associated distance
-    curr_address = address_lookup('4001 S 700 East', address_list)  # Always start package delivery from HUB
-    total_distance = 0
-    while len(pack_list) > 0:
-        short_distance = float("inf")  # Next distance will always be less than infinity so next address will update
-
-        # Determine the package with the nearest delivery location
-        package_index = 0
-        for package in pack_list:
-            tmp_next_address = address_lookup(package_hash.search(int(pack_list[package_index])).delivery_address, address_list)
-            tmp_distance = float(distance_array[tmp_next_address][curr_address])
-
-            # If the temp_distance is less than the current short_distance -> update short_distance
-            if tmp_distance < short_distance:
-                next_address = tmp_next_address
-                short_distance = tmp_distance
-                remove_package = package
-
-            package_index += 1  # Iterate to next package to determine distance from current location
-
-        # Travel to next destination. Update current address (with next_address).
-        travel_time = timedelta(minutes=(short_distance / avg_speed))  # Calculate travel time (minutes)
-        curr_address = next_address  # Update current address
-        current_time = current_time + travel_time
-
-        # 'Deliver' package by removing it from the truck's package list and timestamping it.
-        print('Heading to address ', package_hash.search(next_address).delivery_address, ', ', short_distance,
-              ' miles. Delivering package ', remove_package, '. Package delivered at ', current_time.strftime('%H:%M'), '.')
-
-        pack_list.remove(remove_package)
-        package_hash.search(remove_package).delivery_status = "DELIVERED"
-        package_hash.search(remove_package).delivery_timestamp = current_time.strftime('%H:%M')
-        total_distance = float("%0.2f" % (total_distance + short_distance))
-
-        print('Truck package list: ', pack_list)
-        print('Current address is ', curr_address, '. Total distance travelled is ',
-              total_distance, ' miles.\n')
-
-    print('\nReturning to HUB.')
-    distance_to_hub = float(distance_array[0][curr_address])
-    time_at_hub = current_time + timedelta(minutes=(distance_to_hub / avg_speed))
-    total_distance = total_distance + distance_to_hub  # Calculate distance after return to HUB
-    print('\nTotal distance travelled was ', total_distance, ' miles. Current time is ', time_at_hub.strftime('%H:%M'), '.')
-
+tp1 = [13, 39, 14, 15, 16, 34, 19, 20, 21, 29, 7, 30, 8, 31, 32, 6]
+tp2 = [2, 33, 10, 11, 12, 17, 22, 23, 24]
+tp3 = [4, 40, 1, 25, 26, 38, 5, 37]
+tp4 = [3, 18, 36, 28, 35, 27, 9]
 
 print("DELIVERING:")
-delivery_algorithm(truck_packages, curr_time)
+truck1 = Truck(1, truck1_start_time)
+truck2 = Truck(2, truck2_start_time)
 
-print(package_hash.search(16))
+truck1.load_packages_onto_truck(tp1)
+truck1.package_delivery()
 
-"""
-# ------Dijkstra Algorithm---------------------------------------------------
-class Vertex:
-    def __init__(self, label):
-        self.label = label
+truck2.load_packages_onto_truck(tp2)
+truck2.package_delivery()
 
+truck1.load_packages_onto_truck(tp3)
+truck1.package_delivery()
 
-class Graph:
-    def __init__(self):
-        self.adjacency_list = {}
-        self.edge_weights = {}
-
-    def add_vertex(self, new_vertex):
-        self.adjacency_list[new_vertex] = []
-
-    def add_directed_edge(self, from_vertex, to_vertex, weight=1.0):
-        self.edge_weights[(from_vertex, to_vertex)] = weight
-        self.adjacency_list[from_vertex].append(to_vertex)
-
-    def add_undirected_edge(self, vertex_a, vertex_b, weight=1.0):
-        self.add_directed_edge(vertex_a, vertex_b, weight)
-        self.add_directed_edge(vertex_b, vertex_a, weight)
+truck2.load_packages_onto_truck(tp4)
+truck2.package_delivery()
 
 
-def dijkstra_shortest_path(graph, start_vertex):
-    # Put all vertices in an unvisited queue
-    unvisited_queue = []
-    for current_vertex in graph.adjacency_list:
-        unvisited_queue.append(current_vertex)
+req_time = input("Enter time to check package delivery status: ")
 
-    # start_vertex has a distance of 0 from itself (HUB)
-    start_vertex.distance = 0
-
-    # Remove on vertex with each iteration until list is empty
-    while len(unvisited_queue) > 0:
-        # Visit vertex with minimum distance from start_vertex
-        smallest_index = 0
-        for i in range(1, len(unvisited_queue)):
-            if unvisited_queue[i].distance < unvisited_queue[smallest_index].distance:
-                smallest_index = i
-        current_vertex = unvisited_queue.pop(smallest_index)
-
-        # Check potential path lengths from current_vertex to all neighbors
-        for adj_vertex in graph.adjacency_list[current_vertex]:
-            edge_weight = graph.edge_weights[(current_vertex, adj_vertex)]
-            alternative_path_distance = current_vertex.ditance + edge_weight
-
-            # If shorter path found, update adj_vertex distance and predecessor
-            if alternative_path_distance < adj_vertex.distance:
-                adj_vertex.distance = alternative_path_distance
-                adj_vertex.pred_vertex = current_vertex
-
-
-def get_shortest_path(start_vertex, end_vertex):
-    # Start from end_vertex and build path backwards
-    path = ''
-    current_vertex = end_vertex
-    while current_vertex is not start_vertex:
-        path = ' -> ' + str(current_vertex.label) + path
-        current_vertex = current_vertex.pred_vertex
-    path = start_vertex.label + path
-    return path
-"""
+print('Package 1 delivered at ', package_hash.search(1).status_update_time, '\n',
+      'Package 6 delivered at ', package_hash.search(6).status_update_time, '\n',
+      'Package 13 delivered at ', package_hash.search(13).status_update_time, '\n',
+      'Package 14 delivered at ', package_hash.search(14).status_update_time, '\n',
+      'Package 15 delivered at ', package_hash.search(15).status_update_time, '\n',
+      'Package 16 delivered at ', package_hash.search(16).status_update_time, '\n',
+      'Package 20 delivered at ', package_hash.search(20).status_update_time, '\n',
+      'Package 25 delivered at ', package_hash.search(25).status_update_time, '\n',
+      'Package 29 delivered at ', package_hash.search(29).status_update_time, '\n',
+      'Package 30 delivered at ', package_hash.search(30).status_update_time, '\n',
+      'Package 31 delivered at ', package_hash.search(31).status_update_time, '\n',
+      'Package 34 delivered at ', package_hash.search(34).status_update_time, '\n',
+      'Package 37 delivered at ', package_hash.search(37).status_update_time, '\n',
+      'Package 40 delivered at ', package_hash.search(40).status_update_time, '\n')
+print('Total distance travelled is', float("%0.2f" % (truck1.distance_travelled + truck2.distance_travelled)), 'miles.')
