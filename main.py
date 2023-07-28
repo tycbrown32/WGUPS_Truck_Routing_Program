@@ -40,7 +40,7 @@ class Truck:
         self.distance_travelled = float("%0.2f" % 0)
 
     # Method to singularly 'load' packages to truck.
-    # Runtime complexity = O(1). Space Complexity = O(1)
+    # Runtime complexity = O(1).
     def add_package(self, pack_id):
         if len(self.packages) >= self.pack_limit:
             print('Truck is full!')
@@ -48,16 +48,16 @@ class Truck:
             self.packages.append(pack_id)
 
     # Method for loading truck given a list of packages. Also updates package objects.
-    # Runtime complexity = O(n^2). Space Complexity = O(n)
+    # Runtime complexity = O(n^2).
     def load_packages_onto_truck(self, packs):
         for pack in packs:
             self.add_package(pack)
             package_hash.search(pack).delivery_status = "IN ROUTE"
-            package_hash.search(pack).time_left_hub = self.truck_time.strftime("%H:%M")
+            package_hash.search(pack).time_left_hub = 'Loaded at ' + self.truck_time.strftime("%H:%M")
             package_hash.search(pack).truck = 'Truck ' + str(self.id)
 
     # Package delivery algorithm using nearest neighbor.
-    # Runtime = O(n^3). Space Complexity = O(n).
+    # Runtime = O(n^3).
     def package_delivery(self):
         avg_speed = self.speed / 60  # Average speed in miles per minute.
 
@@ -91,7 +91,7 @@ class Truck:
             # 'Deliver' package by removing it from the truck's package list and timestamping it.
             self.packages.remove(removal_package)
             package_hash.search(removal_package).delivery_status = "DELIVERED"
-            package_hash.search(removal_package).delivery_time = self.truck_time.strftime('%H:%M')
+            package_hash.search(removal_package).delivery_time = 'Delivered at ' + self.truck_time.strftime('%H:%M')
             self.distance_travelled = float("%0.2f" % (self.distance_travelled + short_distance))
 
         # 'Return to hub'. Update distance travelled by truck and time truck returned to hub.
@@ -105,7 +105,8 @@ class Truck:
 
 
 # Chaining Hash Table Class---------------------------------------------------------------------------------------------
-# Runtime complexity = O(n). Space Complexity = O(n)
+# This hash table is based on the example provided in C950 - Webinar 1 - Let's Go Hashing.
+# Runtime complexity = O(n).
 class ChainingHashTable:
     # Initialize hash table.
     def __init__(self, initial_capacity=10):
@@ -157,7 +158,7 @@ package_hash_key = []  # List of keys for the hash table. Provides a method for 
 
 
 # Function to load data from .csv file into Package objects-------------------------------------------------------------
-# Runtime complexity = O(n). Space Complexity = O(n)
+# Runtime complexity = O(n).
 def load_package_data(csv_file, hash_table, hash_key):
     # https://docs.python.org/3/library/csv.html
     with open(csv_file, newline='') as packages_csv:
@@ -173,7 +174,7 @@ load_package_data('packages.csv', package_hash, package_hash_key)  # Load packag
 
 
 # Create distance array and address list from .csv file ----------------------------------------------------------------
-# Runtime complexity = O(n). Space Complexity = O(n)
+# Runtime complexity = O(n).
 def create_distance_array(csv_file):
     with open(csv_file, newline='') as distances_csv:
         distances = csv.reader(distances_csv, delimiter=',', quotechar='|')
@@ -188,7 +189,7 @@ distance_array = create_distance_array('distances.csv')  # Create array of dista
 
 
 # Create address list from .csv file -----------------------------------------------------------------------------------
-# Runtime complexity = O(n). Space Complexity = O(n)
+# Runtime complexity = O(n).
 def create_address_list(csv_file):
     with open(csv_file, newline='') as addresses_csv:
         addresses = csv.reader(addresses_csv, delimiter=',', quotechar='|')
@@ -203,7 +204,7 @@ address_list = create_address_list('addresses.csv')  # Create address list.
 
 
 # Address lookup function: provides a number to be associated with an address ------------------------------------------
-# Runtime complexity = O(n^2). Space Complexity = O(n^2)
+# Runtime complexity = O(n^2).
 def address_lookup(address_str, list_addresses):
     row_count = 0
     for row in list_addresses:
@@ -214,13 +215,15 @@ def address_lookup(address_str, list_addresses):
 
 
 # Function to determine package status at a specified time -------------------------------------------------------------
-# Runtime complexity = O(n^2). Space Complexity = O(n).
+# Runtime complexity = O(n^2).
 def package_status(check_time, hash_table, hash_table_key):
     for pack in hash_table_key:
         delivery_time_str = hash_table.search(pack).delivery_time
+        delivery_time_str = delivery_time_str.lstrip('Delivered at ')
         delivery_time = time_correction(delivery_time_str)
 
         time_left_hub_str = hash_table.search(pack).time_left_hub
+        time_left_hub_str = time_left_hub_str.lstrip('Loaded at ')
         time_left_hub = time_correction(time_left_hub_str)
 
         if delivery_time <= check_time:
@@ -232,7 +235,7 @@ def package_status(check_time, hash_table, hash_table_key):
 
 
 # Function to adjust a time to "Today" when given hour and minute string inputs ----------------------------------------
-# Runtime complexity = O(1). Space Complexity = O(1)
+# Runtime complexity = O(1).
 def time_correction(time_str):
     time_hour = datetime.strptime(time_str, "%H:%M").hour
     time_minute = datetime.strptime(time_str, "%H:%M").minute
@@ -279,7 +282,7 @@ print('\nTotal distance travelled was', float("%0.2f" % (truck1.distance_travell
       'miles.\n')
 
 # User interface -------------------------------------------------------------------------------------------------------
-# Runtime complexity = O(n^2). Space Complexity = O(n)
+# Runtime complexity = O(n^2)
 next_step = 'm'  # Initialize variable to go to the 'main menu'
 while next_step != 'e':
     check = input("\nCheck delivery status (d) OR view package information (v) OR exit (e): ")
